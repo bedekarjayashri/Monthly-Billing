@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newspaper Bill Tracker</title>
+<style>
+  :root {
+    --bg: #f5f5f0;
+    --card: #ffffff;
+    --border: #e0ddd8;
+    --accent: #2c6e49;
+    --accent-light: #e8f5ee;
+    --accent-hover: #245c3c;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --danger: #c0392b;
+    --danger-light: #fdecea;
+    --warn: #e67e22;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header { background: var(--accent); color: #fff; padding: 16px 24px; }
+  header h1 { font-size: 1.25rem; font-weight: 600; }
+  header p { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+
+  .tabs { display: flex; background: var(--card); border-bottom: 2px solid var(--border); padding: 0 24px; gap: 4px; }
+  .tab-btn { padding: 12px 18px; border: none; background: none; cursor: pointer; font-size: 0.9rem; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; font-weight: 500; }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:hover:not(.active) { color: var(--text); }
+
+  .tab-panel { display: none; padding: 24px; max-width: 900px; margin: 0 auto; }
+  .tab-panel.active { display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; }
+
+  .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group label { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
+  input[type=text], input[type=number], select { border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; font-size: 0.875rem; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; }
+  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: var(--accent); }
+  input[type=number] { width: 70px; }
+  input[type=text] { min-width: 180px; }
+
+  .price-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 10px; }
+  .price-grid .form-group { align-items: center; }
+  .price-grid label { text-align: center; }
+  .price-grid input { width: 100%; text-align: center; }
+
+  .btn { border: none; border-radius: 6px; padding: 8px 14px; font-size: 0.875rem; cursor: pointer; font-weight: 500; transition: background 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-danger { background: var(--danger-light); color: var(--danger); }
+  .btn-danger:hover { background: #f5c6c2; }
+  .btn-secondary { background: var(--border); color: var(--text); }
+  .btn-secondary:hover { background: #ccc; }
+  .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+
+  .newspaper-list { display: flex; flex-direction: column; gap: 10px; }
+  .newspaper-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .newspaper-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--accent-light); }
+  .newspaper-name { font-weight: 600; font-size: 0.95rem; }
+  .newspaper-prices { display: grid; grid-template-columns: repeat(7, 1fr); padding: 10px 16px; gap: 4px; }
+  .day-price { text-align: center; }
+  .day-price .day-label { font-size: 0.7rem; color: var(--muted); display: block; }
+  .day-price .price-val { font-size: 0.9rem; font-weight: 500; }
+
+  .month-nav { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  input[type=month] { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 1rem; color: var(--text); background: var(--bg); outline: none; transition: border-color 0.15s; }
+  input[type=month]:focus { border-color: var(--accent); }
+
+  .selected-date-bar { display: flex; align-items: center; justify-content: space-between; background: var(--accent-light); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; }
+  .selected-date-bar span { font-weight: 600; font-size: 1rem; color: var(--accent); }
+
+  .cal-picker-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-picker-header span { font-weight: 600; font-size: 1rem; }
+  .cal-picker-nav { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 6px 14px; font-size: 1.2rem; cursor: pointer; color: var(--text); line-height: 1; }
+  .cal-picker-nav:hover { background: var(--accent-light); }
+  .cal-picker-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-day-label { text-align: center; font-size: 0.72rem; color: var(--muted); font-weight: 600; padding: 4px 0 8px; }
+  .cal-day-cell { position: relative; text-align: center; font-size: 0.95rem; border-radius: 8px; cursor: pointer; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background 0.12s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .cal-day-cell:hover { background: var(--accent-light); }
+  .cal-day-cell.today { background: var(--accent-light); color: var(--accent); font-weight: 700; }
+  .cal-day-cell.selected { background: var(--accent) !important; color: #fff; font-weight: 700; }
+  .cal-day-cell.disabled { color: var(--border); pointer-events: none; }
+  .cal-day-cell.has-data::after { content: ''; display: block; width: 5px; height: 5px; background: var(--accent); border-radius: 50%; margin-top: 2px; }
+  .cal-day-cell.selected.has-data::after { background: rgba(255,255,255,0.8); }
+
+  .delivery-date-label { font-weight: 600; font-size: 1rem; color: var(--accent); margin-bottom: 14px; }
+  .delivery-input-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .delivery-input-row:last-child { border-bottom: none; }
+  .delivery-np-name { font-size: 0.95rem; font-weight: 500; flex: 1; padding-right: 12px; }
+  .delivery-np-count { width: 72px; font-size: 1rem; padding: 8px 10px; text-align: center; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); outline: none; transition: border-color 0.15s; }
+  .delivery-np-count:focus { border-color: var(--accent); }
+  .delivery-np-count.has-value { border-color: var(--accent); background: var(--accent-light); font-weight: 600; }
+
+  .bill-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .bill-table th { background: var(--accent-light); padding: 10px 12px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); }
+  .bill-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .bill-table tr:last-child td { border-bottom: none; }
+  .bill-table tr:hover td { background: var(--bg); }
+  .bill-footer { margin-top: 12px; padding: 14px 16px; background: var(--accent-light); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .bill-total { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+  .bill-meta { font-size: 0.85rem; color: var(--muted); }
+
+  .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 0.9rem; }
+  .badge { display: inline-block; font-size: 0.7rem; padding: 2px 7px; border-radius: 12px; font-weight: 600; background: var(--accent-light); color: var(--accent); }
+
+  .edit-form { padding: 12px 16px; background: #fffdf5; border-top: 1px solid var(--border); display: none; }
+  .edit-form.open { display: block; }
+
+  .actions { display: flex; gap: 6px; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .tip { font-size: 0.78rem; color: var(--muted); margin-top: 8px; }
+
+  /* ── Mobile overrides ── */
+  @media (max-width: 600px) {
+    header { padding: 12px 16px; }
+    header h1 { font-size: 1.1rem; }
+    .tabs { padding: 0; }
+    .tab-btn { flex: 1; padding: 10px 4px; font-size: 0.78rem; text-align: center; }
+    .tab-panel { padding: 12px; }
+    .card { padding: 14px; }
+    input[type=text], input[type=number], select { font-size: 1rem; padding: 9px 10px; }
+    input[type=text] { min-width: unset; width: 100%; }
+    .price-grid { gap: 4px; }
+    .price-grid input { font-size: 0.78rem; padding: 6px 2px; }
+    .btn { min-height: 42px; }
+    .btn-sm { min-height: 36px; padding: 6px 12px; }
+    .month-nav { flex-wrap: wrap; gap: 8px; }
+    .month-nav select { flex: 1; }
+    .newspaper-prices { overflow-x: auto; }
+    .bill-wrap { overflow-x: auto; }
+    .bill-footer { flex-direction: column; gap: 6px; align-items: flex-start; }
+    .bill-table { font-size: 0.8rem; }
+    .bill-table th, .bill-table td { padding: 7px 8px; }
+    .delivery-np-count { width: 64px; }
+    .cal-day-cell { min-height: 40px; font-size: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Newspaper Bill Tracker</h1>
+  <p>Track daily deliveries and generate monthly bills</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="newspapers">Newspapers</button>
+  <button class="tab-btn" data-tab="deliveries">Log Deliveries</button>
+  <button class="tab-btn" data-tab="bill">Monthly Bill</button>
+</nav>
+
+<!-- TAB 1: Manage Newspapers -->
+<section id="tab-newspapers" class="tab-panel active">
+  <div class="card">
+    <h2>Add Newspaper</h2>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Newspaper Name</label>
+      <input type="text" id="np-name" placeholder="e.g. Times of India" />
+    </div>
+    <div>
+      <label style="font-size:0.75rem;color:var(--muted);font-weight:500">Paper Price per Day (₹)</label>
+      <div class="price-grid" id="add-price-grid"></div>
+    </div>
+    <div style="margin-top:12px" class="form-group">
+      <label>Monthly Delivery Charge (₹)</label>
+      <input type="text" inputmode="decimal" id="add-delivery-charge" placeholder="0" style="min-width:120px" />
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-primary" onclick="addNewspaper()">Add Newspaper</button>
+    </div>
+    <p class="tip">Set paper prices per day of the week. Delivery charge is a flat monthly fee.</p>
+  </div>
+
+  <div class="card">
+    <h2>Your Newspapers</h2>
+    <div class="newspaper-list" id="newspaper-list">
+      <div class="empty-state">No newspapers added yet. Add one above.</div>
+    </div>
+  </div>
+
+</section>
+
+<!-- TAB 2: Log Deliveries -->
+<section id="tab-deliveries" class="tab-panel">
+  <div class="card">
+    <!-- Selected date bar (shown after picking a date) -->
+    <div id="date-selected-bar" style="display:none">
+      <div class="selected-date-bar">
+        <span id="date-selected-label"></span>
+        <button class="btn btn-secondary btn-sm" onclick="showCalPicker()">Change Date</button>
+      </div>
+    </div>
+    <!-- Calendar picker -->
+    <div id="cal-picker-wrap">
+      <div class="cal-picker-header">
+        <button class="cal-picker-nav" onclick="calPickerNav(-1)">&#8249;</button>
+        <span id="cal-picker-title"></span>
+        <button class="cal-picker-nav" onclick="calPickerNav(1)">&#8250;</button>
+      </div>
+      <div id="cal-picker-grid" class="cal-picker-grid"></div>
+    </div>
+    <!-- Delivery inputs (shown after date picked) -->
+    <div id="delivery-inputs"></div>
+    <p class="tip" style="margin-top:12px">Tap a date, then enter copies delivered. Changes save automatically.</p>
+  </div>
+</section>
+
+<!-- TAB 3: Monthly Bill -->
+<section id="tab-bill" class="tab-panel">
+  <div class="card">
+    <div class="month-nav">
+      <div class="form-group">
+        <label>Select Month</label>
+        <input type="month" id="bill-month" onchange="renderBill()" />
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="renderBill()">Refresh</button>
+    </div>
+    <div class="bill-wrap"><div id="bill-content"></div></div>
+  </div>
+</section>
+
+<script>
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function loadData() {
+  try {
+    const data = JSON.parse(localStorage.getItem('newspaperTracker')) || { newspapers: [], deliveries: {} };
+    // Migrate: convert old per-day deliveryCharges object to monthlyDeliveryCharge
+    data.newspapers.forEach(np => {
+      if (np.deliveryCharges && typeof np.deliveryCharges === 'object') {
+        if (np.monthlyDeliveryCharge === undefined)
+          np.monthlyDeliveryCharge = Object.values(np.deliveryCharges).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+        delete np.deliveryCharges;
+      }
+      if (np.monthlyDeliveryCharge === undefined) np.monthlyDeliveryCharge = 0;
+    });
+    // Migrate old format: deliveries[date] was a single string ID → {npId: 1}
+    for (const [key, val] of Object.entries(data.deliveries)) {
+      if (typeof val === 'string') data.deliveries[key] = { [val]: 1 };
+    }
+    return data;
+  } catch { return { newspapers: [], deliveries: {} }; }
+}
+function saveData(data) { localStorage.setItem('newspaperTracker', JSON.stringify(data)); }
+function generateId() { return 'np_' + Date.now() + Math.random().toString(36).slice(2,6); }
+function dateKey(y, m, d) { return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function today() { const n = new Date(); return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate() }; }
+
+// ── Tab 1: Newspapers ──────────────────────────────────────────
+
+function buildPriceGrid(containerId, values = {}) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = DAYS.map((day, i) => `
+    <div class="form-group">
+      <label>${day}</label>
+      <input type="number" min="0" step="0.01" value="${values[i] || ''}" placeholder="0" data-day="${i}" />
+    </div>`).join('');
+}
+
+function getPricesFromGrid(containerId) {
+  const prices = {};
+  document.querySelectorAll(`#${containerId} input[data-day]`).forEach(inp => {
+    prices[inp.dataset.day] = parseFloat(inp.value) || 0;
+  });
+  return prices;
+}
+
+function addNewspaper() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { alert('Please enter a newspaper name.'); return; }
+  const data = loadData();
+  if (data.newspapers.some(n => n.name.toLowerCase() === name.toLowerCase())) {
+    alert('A newspaper with that name already exists.'); return;
+  }
+  const monthlyDeliveryCharge = parseFloat(document.getElementById('add-delivery-charge').value) || 0;
+  data.newspapers.push({ id: generateId(), name, prices: getPricesFromGrid('add-price-grid'), monthlyDeliveryCharge });
+  saveData(data);
+  document.getElementById('np-name').value = '';
+  document.getElementById('add-delivery-charge').value = '';
+  buildPriceGrid('add-price-grid');
+  renderNewspapers();
+  renderDeliveryInputs();
+  renderBill();
+}
+
+function deleteNewspaper(id) {
+  if (!confirm('Delete this newspaper? Its delivery records will remain but show as unknown.')) return;
+  const data = loadData();
+  data.newspapers = data.newspapers.filter(n => n.id !== id);
+  saveData(data);
+  renderNewspapers();
+  renderDeliveryInputs();
+  renderBill();
+}
+
+function toggleEdit(id) {
+  const el = document.getElementById('edit-form-' + id);
+  el.classList.toggle('open');
+}
+
+function saveEdit(id) {
+  const name = document.getElementById('edit-name-' + id).value.trim();
+  if (!name) { alert('Name cannot be empty.'); return; }
+  const data = loadData();
+  const np = data.newspapers.find(n => n.id === id);
+  if (!np) return;
+  np.name = name;
+  np.prices = getPricesFromGrid('edit-prices-' + id);
+  np.monthlyDeliveryCharge = parseFloat(document.getElementById('edit-delivery-' + id).value) || 0;
+  saveData(data);
+  renderNewspapers();
+  renderCalendar();
+  renderBill();
+}
+
+function renderNewspapers() {
+  const data = loadData();
+  const el = document.getElementById('newspaper-list');
+  if (!data.newspapers.length) {
+    el.innerHTML = '<div class="empty-state">No newspapers added yet. Add one above.</div>';
+    return;
+  }
+  el.innerHTML = data.newspapers.map(np => `
+    <div class="newspaper-item">
+      <div class="newspaper-header">
+        <span class="newspaper-name">${escHtml(np.name)}</span>
+        <div class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="toggleEdit('${np.id}')">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteNewspaper('${np.id}')">Delete</button>
+        </div>
+      </div>
+      <div style="padding:6px 16px 2px;font-size:0.7rem;color:var(--muted);font-weight:500">Paper Price</div>
+      <div class="newspaper-prices">
+        ${DAYS.map((d, i) => `
+          <div class="day-price">
+            <span class="day-label">${d}</span>
+            <span class="price-val">${np.prices[i] > 0 ? '₹' + np.prices[i] : '—'}</span>
+          </div>`).join('')}
+      </div>
+      <div style="padding:4px 16px 10px;font-size:0.8rem;color:var(--muted)">
+        Monthly delivery charge: <strong style="color:var(--text)">${np.monthlyDeliveryCharge > 0 ? '₹' + np.monthlyDeliveryCharge : '—'}</strong>
+      </div>
+      <div class="edit-form" id="edit-form-${np.id}">
+        <div class="form-group" style="margin-bottom:10px">
+          <label>Name</label>
+          <input type="text" id="edit-name-${np.id}" value="${escHtml(np.name)}" />
+        </div>
+        <label style="font-size:0.75rem;color:var(--muted);font-weight:500">Paper Price per Day (₹)</label>
+        <div class="price-grid" id="edit-prices-${np.id}"></div>
+        <div class="form-group" style="margin-top:10px">
+          <label>Monthly Delivery Charge (₹)</label>
+          <input type="text" inputmode="decimal" id="edit-delivery-${np.id}" value="${np.monthlyDeliveryCharge || ''}" placeholder="0" style="min-width:120px" />
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="saveEdit('${np.id}')">Save</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleEdit('${np.id}')">Cancel</button>
+        </div>
+      </div>
+    </div>`).join('');
+
+  data.newspapers.forEach(np => buildPriceGrid('edit-prices-' + np.id, np.prices));
+}
+
+// ── Tab 2: Calendar date picker ────────────────────────────────
+
+let calPickerYear, calPickerMonth, selectedDateKey = null;
+
+function initCalPicker() {
+  const t = today();
+  calPickerYear = t.y;
+  calPickerMonth = t.m;
+}
+
+function showCalPicker() {
+  document.getElementById('cal-picker-wrap').style.display = '';
+  document.getElementById('date-selected-bar').style.display = 'none';
+  document.getElementById('delivery-inputs').innerHTML = '';
+  renderCalPicker();
+}
+
+function calPickerNav(dir) {
+  calPickerMonth += dir;
+  if (calPickerMonth > 11) { calPickerMonth = 0; calPickerYear++; }
+  if (calPickerMonth < 0)  { calPickerMonth = 11; calPickerYear--; }
+  renderCalPicker();
+}
+
+function renderCalPicker() {
+  const t = today();
+  const data = loadData();
+  const firstDay = new Date(calPickerYear, calPickerMonth, 1).getDay();
+  const daysInMonth = new Date(calPickerYear, calPickerMonth + 1, 0).getDate();
+
+  document.getElementById('cal-picker-title').textContent = `${MONTHS[calPickerMonth]} ${calPickerYear}`;
+
+  let html = DAYS.map(d => `<div class="cal-day-label">${d}</div>`).join('');
+  for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isFuture = calPickerYear > t.y || (calPickerYear === t.y && calPickerMonth > t.m) ||
+                     (calPickerYear === t.y && calPickerMonth === t.m && d > t.d);
+    const isToday   = calPickerYear === t.y && calPickerMonth === t.m && d === t.d;
+    const key = dateKey(calPickerYear, calPickerMonth, d);
+    const isSelected = key === selectedDateKey;
+    const hasData = !!(data.deliveries[key] && Object.keys(data.deliveries[key]).length);
+
+    let cls = 'cal-day-cell';
+    if (isFuture)    cls += ' disabled';
+    if (isSelected)  cls += ' selected';
+    else if (isToday) cls += ' today';
+    if (hasData)     cls += ' has-data';
+
+    const click = isFuture ? '' : `onclick="selectCalDate(${calPickerYear},${calPickerMonth},${d})"`;
+    html += `<div class="${cls}" ${click}>${d}</div>`;
+  }
+  document.getElementById('cal-picker-grid').innerHTML = html;
+}
+
+function selectCalDate(year, month, day) {
+  selectedDateKey = dateKey(year, month, day);
+  const dow = new Date(year, month, day).getDay();
+  const dd = String(day).padStart(2,'0');
+  const mm = String(month + 1).padStart(2,'0');
+  document.getElementById('date-selected-label').textContent = `${DAYS[dow]}, ${dd}/${mm}/${year}`;
+  document.getElementById('cal-picker-wrap').style.display = 'none';
+  document.getElementById('date-selected-bar').style.display = '';
+  renderDeliveryInputs();
+}
+
+function renderDeliveryInputs() {
+  const key = selectedDateKey;
+  if (!key) return;
+  const [year, month, day] = key.split('-').map(Number); // month is 1-indexed here
+  const data = loadData();
+  const saved = data.deliveries[key] || {};
+  const el = document.getElementById('delivery-inputs');
+
+  if (!data.newspapers.length) {
+    el.innerHTML = '<div class="empty-state">No newspapers added yet. Go to Newspapers tab first.</div>'; return;
+  }
+
+  const dow = new Date(year, month - 1, day).getDay();
+  el.innerHTML = `
+    <div class="delivery-date-label">${DAYS[dow]}, ${String(day).padStart(2,'0')}/${String(month).padStart(2,'0')}/${year}</div>
+    ${data.newspapers.map(n => {
+      const qty = saved[n.id] || 0;
+      const cls = qty > 0 ? ' has-value' : '';
+      return `<div class="delivery-input-row">
+        <span class="delivery-np-name">${escHtml(n.name)}</span>
+        <input type="text" inputmode="decimal" class="delivery-np-count${cls}"
+          value="${qty || ''}" placeholder="0"
+          onchange="logDelivery(event,'${key}','${n.id}',this.value)" />
+      </div>`;
+    }).join('')}`;
+}
+
+function logDelivery(evt, key, npId, rawCount) {
+  const count = Math.max(0, parseFloat(rawCount) || 0);
+  const data = loadData();
+  if (!data.deliveries[key]) data.deliveries[key] = {};
+  if (count > 0) data.deliveries[key][npId] = count;
+  else delete data.deliveries[key][npId];
+  if (!Object.keys(data.deliveries[key]).length) delete data.deliveries[key];
+  saveData(data);
+  evt.target.classList.toggle('has-value', count > 0);
+  renderBill();
+}
+
+// ── Tab 3: Bill ────────────────────────────────────────────────
+
+function renderBill() {
+  const val = document.getElementById('bill-month').value;
+  if (!val) { document.getElementById('bill-content').innerHTML = '<div class="empty-state">Select a month above.</div>'; return; }
+  const [year, month] = (() => { const [y,m] = val.split('-').map(Number); return [y, m-1]; })(); // month 0-indexed
+  const data = loadData();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let rows = [];
+  let paperTotal = 0;
+  let totalCopies = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dateKey(year, month, d);
+    const dayDeliveries = data.deliveries[key];
+    if (!dayDeliveries || !Object.keys(dayDeliveries).length) continue;
+    const dayOfWeek = new Date(year, month, d).getDay();
+    for (const [npId, qty] of Object.entries(dayDeliveries)) {
+      const np = data.newspapers.find(n => n.id === npId);
+      const unitPrice = np ? (parseFloat(np.prices[dayOfWeek]) || 0) : 0;
+      const rowTotal = unitPrice * qty;
+      paperTotal += rowTotal;
+      totalCopies += qty;
+      rows.push({ date: d, day: DAYS[dayOfWeek], name: np ? np.name : '(deleted)', qty, unitPrice, rowTotal });
+    }
+  }
+
+  // Collect monthly delivery charges for newspapers that appeared this month
+  const deliveredNpIds = new Set(Object.values(data.deliveries).flatMap(d => Object.keys(d || {})));
+  const deliveryRows = data.newspapers
+    .filter(np => deliveredNpIds.has(np.id) && np.monthlyDeliveryCharge > 0)
+    .map(np => ({ name: np.name, charge: np.monthlyDeliveryCharge }));
+  const deliveryTotal = deliveryRows.reduce((s, r) => s + r.charge, 0);
+  const grandTotal = paperTotal + deliveryTotal;
+
+  const el = document.getElementById('bill-content');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-state">No deliveries logged for this month.</div>'; return;
+  }
+
+  el.innerHTML = `
+    <table class="bill-table">
+      <thead><tr><th>Date</th><th>Day</th><th>Newspaper</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit ₹</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td>${String(r.date).padStart(2,'0')}/${String(month+1).padStart(2,'0')}/${year}</td>
+          <td>${r.day}</td>
+          <td>${escHtml(r.name)}</td>
+          <td style="text-align:right">${r.qty}</td>
+          <td style="text-align:right">₹${r.unitPrice.toFixed(2)}</td>
+          <td style="text-align:right">₹${r.rowTotal.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    ${deliveryRows.length ? `
+    <div style="margin-top:12px;font-size:0.8rem;font-weight:600;color:var(--muted);padding:0 2px 4px">Monthly Delivery Charges</div>
+    <table class="bill-table">
+      <thead><tr><th>Newspaper</th><th style="text-align:right">Charge</th></tr></thead>
+      <tbody>
+        ${deliveryRows.map(r => `<tr>
+          <td>${escHtml(r.name)}</td>
+          <td style="text-align:right">₹${r.charge.toFixed(2)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>` : ''}
+    <div class="bill-footer">
+      <span class="bill-meta">${totalCopies} copies · ₹${paperTotal.toFixed(2)} papers${deliveryTotal > 0 ? ` · ₹${deliveryTotal.toFixed(2)} delivery` : ''}</span>
+      <span class="bill-total">Total: ₹${grandTotal.toFixed(2)}</span>
+    </div>`;
+}
+
+function downloadCSV() {
+  const val = document.getElementById('bill-month').value;
+  if (!val) return;
+  const [year, month] = (() => { const [y,m] = val.split('-').map(Number); return [y, m-1]; })(); // month 0-indexed
+  const data = loadData();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let csv = 'Date,Day,Newspaper,Qty,Unit Price,Total\n';
+  let paperTotal = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dateKey(year, month, d);
+    const dayDeliveries = data.deliveries[key];
+    if (!dayDeliveries || !Object.keys(dayDeliveries).length) continue;
+    const dayOfWeek = new Date(year, month, d).getDay();
+    for (const [npId, qty] of Object.entries(dayDeliveries)) {
+      const np = data.newspapers.find(n => n.id === npId);
+      const unitPrice = np ? (parseFloat(np.prices[dayOfWeek]) || 0) : 0;
+      const rowTotal = unitPrice * qty;
+      paperTotal += rowTotal;
+      const name = np ? np.name : '(deleted)';
+      csv += `"${String(d).padStart(2,'0')}/${String(month+1).padStart(2,'0')}/${year}","${DAYS[dayOfWeek]}","${name}","${qty}","${unitPrice.toFixed(2)}","${rowTotal.toFixed(2)}"\n`;
+    }
+  }
+
+  const deliveredNpIds = new Set(Object.values(data.deliveries).flatMap(d => Object.keys(d || {})));
+  let deliveryTotal = 0;
+  csv += '\nMonthly Delivery Charges\nNewspaper,Charge\n';
+  data.newspapers.filter(np => deliveredNpIds.has(np.id) && np.monthlyDeliveryCharge > 0).forEach(np => {
+    deliveryTotal += np.monthlyDeliveryCharge;
+    csv += `"${np.name}","${np.monthlyDeliveryCharge.toFixed(2)}"\n`;
+  });
+  csv += `\n,Grand Total,"${(paperTotal + deliveryTotal).toFixed(2)}"\n`;
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `newspaper-bill-${year}-${String(month+1).padStart(2,'0')}.csv`;
+  a.click();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ───────────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+buildPriceGrid('add-price-grid');
+renderNewspapers();
+// Init calendar picker
+const _t = today();
+initCalPicker();
+renderCalPicker();
+document.getElementById('bill-month').value = `${_t.y}-${String(_t.m+1).padStart(2,'0')}`;
+renderBill();
+</script>
+</body>
+</html>
